@@ -1505,6 +1505,7 @@ export default function ScheduleApp() {
       try { const v = await window.appInfo?.getVersion(); if (v) setAppVersion(v); } catch {}
       try { const s = await window.appInfo?.getLastSync(); if (s) setLastSync(formatSyncTime(s)); } catch {}
       window.updateAPI?.onAvailable(info => { setUpdateInfo(info); setUpdateChecking(false); setUpToDate(false); });
+      window.updateAPI?.onNotAvailable && window.updateAPI.onNotAvailable(() => { setUpdateChecking(false); setUpToDate(true); setTimeout(() => setUpToDate(false), 3000); });
       window.updateAPI?.onProgress(p => { setUpdateDownloading(true); setUpdateProgress(p.percent); });
       window.updateAPI?.onDownloaded(() => { setUpdateDownloading(false); setUpdateDownloaded(true); });
       window.updateAPI?.check();
@@ -1562,14 +1563,18 @@ export default function ScheduleApp() {
         flash("データを再読み込みしました");
       } else { flash("保存データがありません"); }
     } catch { flash("読み込みに失敗しました"); }
-    // check for updates
-    if (window.updateAPI && !updateInfo && !updateDownloaded) {
-      setUpdateChecking(true);
-      setUpToDate(false);
-      try { await window.updateAPI.check(); } catch {}
-      // if no event fires within 5s, assume up-to-date
-      setTimeout(() => { setUpdateChecking(false); setUpToDate(prev => prev || true); }, 5000);
-    }
+  };
+
+  const checkForUpdate = async () => {
+    if (!window.updateAPI || updateInfo || updateDownloaded || updateChecking) return;
+    setUpdateChecking(true);
+    setUpToDate(false);
+    try { await window.updateAPI.check(); } catch {}
+    setTimeout(() => {
+      setUpdateChecking(false);
+      setUpToDate(prev => { if (!prev) return true; return prev; });
+      setTimeout(() => setUpToDate(false), 3000);
+    }, 5000);
   };
 
   const pushRecords = async () => {
@@ -2325,7 +2330,7 @@ export default function ScheduleApp() {
         <div style={S.statusBar}>
           <div style={S.statusBarLeft}>
             <span>v{appVersion || "—"}</span>
-            <button style={S.statusBarReloadBtn} onClick={reloadRecords} title="再読み込み・更新確認">
+            <button style={S.statusBarReloadBtn} onClick={checkForUpdate} title="更新を確認">
               {updateChecking ? (
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={t.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"spin 1s linear infinite"}}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
               ) : upToDate && !updateInfo ? (
