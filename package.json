@@ -1,6 +1,6 @@
 {
   "name": "schedule-app",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "description": "勤怠記録デスクトップアプリ",
   "main": "electron/main.js",
   "author": "sasakiyoshifumi",

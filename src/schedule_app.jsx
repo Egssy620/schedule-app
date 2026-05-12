@@ -1566,7 +1566,7 @@ export default function ScheduleApp() {
   };
 
   const checkForUpdate = async () => {
-    if (!window.updateAPI || updateInfo || updateDownloaded || updateChecking) return;
+    if (!window.updateAPI || updateInfo || updateChecking) return;
     setUpdateChecking(true);
     setUpToDate(false);
     setUpdateStatusText(null);
