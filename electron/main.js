@@ -206,7 +206,6 @@ function createWindow() {
     mainWindow.loadURL("http://localhost:5173");
   } else {
     mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
-    mainWindow.webContents.openDevTools();
   }
 }
 
@@ -394,18 +393,15 @@ autoUpdater.on("error", (err) => {
 });
 
 ipcMain.handle("check-update", async () => {
-  console.log("[check-update] invoked, isPackaged:", app.isPackaged);
   if (!app.isPackaged) return { available: false, reason: "dev" };
   try {
-    console.log("[check-update] calling autoUpdater.checkForUpdates...");
     const result = await autoUpdater.checkForUpdates();
-    console.log("[check-update] result:", result?.updateInfo ? JSON.stringify({ version: result.updateInfo.version, files: result.updateInfo.files?.length }) : "null");
-    if (result && result.updateInfo && result.updateInfo.version) {
-      return { available: true, version: result.updateInfo.version, releaseNotes: result.updateInfo.releaseNotes || "" };
+    const info = result?.updateInfo;
+    if (info && info.version && info.version !== app.getVersion()) {
+      return { available: true, version: info.version, releaseNotes: info.releaseNotes || "" };
     }
     return { available: false };
   } catch (e) {
-    console.error("[check-update] error:", e?.message, e?.stack);
     return { available: false, error: e?.message || "unknown" };
   }
 });

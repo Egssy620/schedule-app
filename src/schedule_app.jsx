@@ -1573,13 +1573,11 @@ export default function ScheduleApp() {
 
   const checkForUpdate = async () => {
     if (!window.updateAPI || updateInfo || updateDownloaded || updateChecking) return;
-    console.log("[update] check start, updateAPI:", !!window.updateAPI);
     setUpdateChecking(true);
     setUpToDate(false);
     setUpdateStatusText(null);
     try {
       const result = await window.updateAPI.check();
-      console.log("[update] check result:", JSON.stringify(result));
       setUpdateChecking(false);
       if (result?.available) {
         setUpdateInfo({ version: result.version, releaseNotes: result.releaseNotes });
@@ -1593,7 +1591,6 @@ export default function ScheduleApp() {
         setTimeout(() => setUpToDate(false), 3000);
       }
     } catch (e) {
-      console.log("[update] check error:", e);
       setUpdateChecking(false);
       showUpdateStatus("取得失敗");
     }
@@ -2605,7 +2602,7 @@ function createStyles(t) {
   statusBarRight: { fontVariantNumeric:"tabular-nums", display:"flex", alignItems:"center", gap:6 },
 
   /* update card */
-  updateCard: { position:"fixed", left:20, bottom:36, background:t.bgPopup, border:`1px solid ${t.borderMedium}`, borderRadius:12, padding:"14px 18px", width:240, boxShadow:t.shadowPopup, backdropFilter:"blur(24px)", WebkitBackdropFilter:"blur(24px)", zIndex:1500 },
+  updateCard: { position:"fixed", left:20, bottom:36, background:t.bgPopup, border:`1px solid ${t.borderMedium}`, borderRadius:12, padding:"10px 14px", width:170, boxShadow:t.shadowPopup, backdropFilter:"blur(24px)", WebkitBackdropFilter:"blur(24px)", zIndex:1500 },
   updateCardTitle: { fontSize:13, fontWeight:600, color:t.textBody, marginBottom:6 },
   updateCardDesc: { fontSize:11, color:t.textWeak, marginTop:4 },
   updateCardBtn: { marginTop:10, background:t.accent, border:"none", borderRadius:8, color:"#fff", padding:"6px 16px", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit", marginRight:6 },
