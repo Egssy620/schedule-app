@@ -1576,34 +1576,24 @@ export default function ScheduleApp() {
     setUpdateChecking(true);
     setUpToDate(false);
     setUpdateStatusText(null);
-    let gotResult = false;
-    // listen for result within 8s
-    const timer = setTimeout(() => {
-      if (!gotResult) {
-        setUpdateChecking(false);
-        showUpdateStatus("取得失敗");
-      }
-    }, 8000);
     try {
-      await window.updateAPI.check();
-    } catch {
-      clearTimeout(timer);
+      const result = await window.updateAPI.check();
       setUpdateChecking(false);
-      showUpdateStatus("取得失敗");
-      return;
-    }
-    // if onAvailable fires, it sets updateInfo (handled by listener)
-    // if nothing fires, the timeout above handles it
-    // for success without update, we rely on the timeout + no updateInfo
-    setTimeout(() => {
-      if (!updateInfo) {
-        setUpdateChecking(false);
+      if (result?.available) {
+        setUpdateInfo({ version: result.version, releaseNotes: result.releaseNotes });
+      } else if (result?.error) {
+        showUpdateStatus("取得失敗");
+      } else if (result?.reason === "dev") {
+        showUpdateStatus("dev版");
+      } else {
         setUpToDate(true);
         showUpdateStatus("最新です");
         setTimeout(() => setUpToDate(false), 3000);
       }
-      clearTimeout(timer);
-    }, 6000);
+    } catch {
+      setUpdateChecking(false);
+      showUpdateStatus("取得失敗");
+    }
   };
 
   const pushRecords = async () => {

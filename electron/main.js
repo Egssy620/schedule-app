@@ -393,8 +393,15 @@ autoUpdater.on("error", (err) => {
 });
 
 ipcMain.handle("check-update", async () => {
-  if (app.isPackaged) {
-    try { await autoUpdater.checkForUpdates(); } catch (e) { console.error("[check-update]", e?.message); }
+  if (!app.isPackaged) return { available: false, reason: "dev" };
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    if (result && result.updateInfo && result.updateInfo.version) {
+      return { available: true, version: result.updateInfo.version, releaseNotes: result.updateInfo.releaseNotes || "" };
+    }
+    return { available: false };
+  } catch (e) {
+    return { available: false, error: e?.message || "unknown" };
   }
 });
 
