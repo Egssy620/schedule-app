@@ -357,6 +357,8 @@ ipcMain.handle("get-app-version", () => {
   return pkg.version || "0.0.0";
 });
 
+ipcMain.handle("get-platform", () => process.platform);
+
 ipcMain.handle("get-last-sync", () => {
   return configMap["last_sync"] || null;
 });

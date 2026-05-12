@@ -32,4 +32,5 @@ contextBridge.exposeInMainWorld("updateAPI", {
 contextBridge.exposeInMainWorld("appInfo", {
   getVersion: () => ipcRenderer.invoke("get-app-version"),
   getLastSync: () => ipcRenderer.invoke("get-last-sync"),
+  getPlatform: () => ipcRenderer.invoke("get-platform"),
 });

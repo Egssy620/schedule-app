@@ -1410,6 +1410,10 @@ export default function ScheduleApp() {
   const [updateChecking, setUpdateChecking] = useState(false);
   const [upToDate, setUpToDate] = useState(false);
   const [updateStatusText, setUpdateStatusText] = useState(null);
+  const [updateDownloading, setUpdateDownloading] = useState(false);
+  const [updateProgress, setUpdateProgress] = useState(0);
+  const [updateDownloaded, setUpdateDownloaded] = useState(false);
+  const [platform, setPlatform] = useState("darwin");
 
   const styleCtx = useMemo(() => {
     const tk = themes[theme] || themes.dark;
@@ -1502,6 +1506,10 @@ export default function ScheduleApp() {
       // app info & update check
       try { const v = await window.appInfo?.getVersion(); if (v) setAppVersion(v); } catch {}
       try { const s = await window.appInfo?.getLastSync(); if (s) setLastSync(formatSyncTime(s)); } catch {}
+      try { const p = await window.appInfo?.getPlatform(); if (p) setPlatform(p); } catch {}
+      // register download listeners (used on Windows for in-app update)
+      window.updateAPI?.onProgress(p => { setUpdateDownloading(true); setUpdateProgress(p.percent); });
+      window.updateAPI?.onDownloaded(() => { setUpdateDownloading(false); setUpdateDownloaded(true); });
       window.updateAPI?.check();
 
     })();
@@ -2367,13 +2375,37 @@ export default function ScheduleApp() {
       )}
 
       {/* ═══ Update Notification ═══ */}
-      {updateInfo && (
+      {updateDownloaded && platform === "win32" ? (
+        <div style={S.updateCard}>
+          <div style={S.updateCardTitle}>更新の準備ができました</div>
+          <div style={S.updateCardDesc}>再起動して更新を適用します。</div>
+          <button style={S.updateCardBtn} onClick={() => window.updateAPI?.install()}>再起動</button>
+          <button style={S.updateCardDismiss} onClick={() => setUpdateDownloaded(false)}>後で</button>
+        </div>
+      ) : updateDownloading && platform === "win32" ? (
+        <div style={S.updateCard}>
+          <div style={S.updateCardTitle}>ダウンロード中...</div>
+          <div style={S.updateProgressTrack}>
+            <div style={{ ...S.updateProgressFill, width: `${updateProgress}%` }} />
+          </div>
+          <div style={S.updateCardDesc}>{updateProgress}%</div>
+        </div>
+      ) : updateInfo ? (
         <div style={S.updateCard}>
           <div style={S.updateCardTitle}>v{updateInfo.version} が利用可能</div>
-          <button style={S.updateCardBtn} onClick={() => { window.open(`https://github.com/Egssy620/schedule-app/releases/tag/v${updateInfo.version}`, "_blank"); setUpdateInfo(null); }}>ダウンロード</button>
+          <button style={S.updateCardBtn} onClick={() => {
+            if (platform === "win32") {
+              setUpdateDownloading(true);
+              setUpdateInfo(null);
+              window.updateAPI?.download();
+            } else {
+              window.open(`https://github.com/Egssy620/schedule-app/releases/tag/v${updateInfo.version}`, "_blank");
+              setUpdateInfo(null);
+            }
+          }}>{platform === "win32" ? "更新" : "ダウンロード"}</button>
           <button style={S.updateCardDismiss} onClick={() => setUpdateInfo(null)}>後で</button>
         </div>
-      )}
+      ) : null}
     </div>
     </StyleContext.Provider>
   );
@@ -2586,5 +2618,7 @@ function createStyles(t) {
   updateCardDesc: { fontSize:11, color:t.textWeak, marginTop:4 },
   updateCardBtn: { marginTop:10, background:t.accent, border:"none", borderRadius:8, color:"#fff", padding:"6px 16px", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit", marginRight:6 },
   updateCardDismiss: { marginTop:10, background:"none", border:`1px solid ${t.borderMedium}`, borderRadius:8, color:t.textDim, padding:"6px 12px", fontSize:11, cursor:"pointer", fontFamily:"inherit" },
+  updateProgressTrack: { height:4, background:t.bgChartTrack, borderRadius:2, overflow:"hidden", marginTop:8 },
+  updateProgressFill: { height:"100%", background:t.accent, borderRadius:2, transition:"width 0.3s ease" },
   };
 }
