@@ -1410,6 +1410,8 @@ export default function ScheduleApp() {
   const [updateDownloading, setUpdateDownloading] = useState(false);
   const [updateProgress, setUpdateProgress] = useState(0);
   const [updateDownloaded, setUpdateDownloaded] = useState(false);
+  const [updateChecking, setUpdateChecking] = useState(false);
+  const [upToDate, setUpToDate] = useState(false);
 
   const styleCtx = useMemo(() => {
     const tk = themes[theme] || themes.dark;
@@ -1502,7 +1504,7 @@ export default function ScheduleApp() {
       // app info & update check
       try { const v = await window.appInfo?.getVersion(); if (v) setAppVersion(v); } catch {}
       try { const s = await window.appInfo?.getLastSync(); if (s) setLastSync(formatSyncTime(s)); } catch {}
-      window.updateAPI?.onAvailable(info => setUpdateInfo(info));
+      window.updateAPI?.onAvailable(info => { setUpdateInfo(info); setUpdateChecking(false); setUpToDate(false); });
       window.updateAPI?.onProgress(p => { setUpdateDownloading(true); setUpdateProgress(p.percent); });
       window.updateAPI?.onDownloaded(() => { setUpdateDownloading(false); setUpdateDownloaded(true); });
       window.updateAPI?.check();
@@ -1560,6 +1562,14 @@ export default function ScheduleApp() {
         flash("データを再読み込みしました");
       } else { flash("保存データがありません"); }
     } catch { flash("読み込みに失敗しました"); }
+    // check for updates
+    if (window.updateAPI && !updateInfo && !updateDownloaded) {
+      setUpdateChecking(true);
+      setUpToDate(false);
+      try { await window.updateAPI.check(); } catch {}
+      // if no event fires within 5s, assume up-to-date
+      setTimeout(() => { setUpdateChecking(false); setUpToDate(prev => prev || true); }, 5000);
+    }
   };
 
   const pushRecords = async () => {
@@ -1873,6 +1883,7 @@ export default function ScheduleApp() {
     <div style={S.root}>
       <style>{`
         .time-scroll::-webkit-scrollbar { display: none; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
 
       {/* ═══ Setup Wizard ═══ */}
@@ -1987,7 +1998,6 @@ export default function ScheduleApp() {
               </>
             )}
           </div>
-          <button style={S.iconBtn} onClick={reloadRecords} title="再読み込み"><RefreshIcon /></button>
           <button style={S.iconBtn} onClick={pushRecords} title="保存・エクスポート"><PushIcon /></button>
           <button style={S.iconBtn} onClick={() => { setTempFolder(saveFolderPath); setShowSettings(true); }} title="設定" data-tour="settingsBtn"><GearIcon /></button>
         </div>
@@ -2313,8 +2323,27 @@ export default function ScheduleApp() {
       {/* ═══ Status Bar ═══ */}
       {!showWizard && (
         <div style={S.statusBar}>
-          <span style={S.statusBarLeft}>v{appVersion || "—"}</span>
-          <span style={S.statusBarRight}>最終同期: {lastSync || "—"}</span>
+          <div style={S.statusBarLeft}>
+            <span>v{appVersion || "—"}</span>
+            <button style={S.statusBarReloadBtn} onClick={reloadRecords} title="再読み込み・更新確認">
+              {updateChecking ? (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={t.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{animation:"spin 1s linear infinite"}}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+              ) : upToDate && !updateInfo ? (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              ) : (
+                <RefreshIcon />
+              )}
+            </button>
+            <style>{`
+              .time-scroll::-webkit-scrollbar { display: none; }
+            `}</style>
+          </div>
+          <div style={S.statusBarRight}>
+            <span>最終同期: {lastSync || "—"}</span>
+            <button style={S.statusBarReloadBtn} onClick={reloadRecords} title="再読み込み">
+              <RefreshIcon />
+            </button>
+          </div>
         </div>
       )}
 
@@ -2542,8 +2571,9 @@ function createStyles(t) {
 
   /* status bar */
   statusBar: { position:"fixed", bottom:0, left:0, right:0, display:"flex", justifyContent:"space-between", alignItems:"center", padding:"5px 20px", background:t.bgCard, borderTop:`1px solid ${t.borderLight}`, backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)", zIndex:100, fontSize:11, color:t.textVeryWeak, letterSpacing:0.3, fontFamily:"inherit" },
-  statusBarLeft: { fontVariantNumeric:"tabular-nums" },
-  statusBarRight: { fontVariantNumeric:"tabular-nums" },
+  statusBarLeft: { fontVariantNumeric:"tabular-nums", display:"flex", alignItems:"center", gap:6 },
+  statusBarReloadBtn: { background:"none", border:"none", color:t.textVeryWeak, cursor:"pointer", padding:2, display:"flex", alignItems:"center", borderRadius:4, transition:"color .15s" },
+  statusBarRight: { fontVariantNumeric:"tabular-nums", display:"flex", alignItems:"center", gap:6 },
 
   /* update card */
   updateCard: { position:"fixed", left:20, bottom:36, background:t.bgPopup, border:`1px solid ${t.borderMedium}`, borderRadius:12, padding:"14px 18px", width:240, boxShadow:t.shadowPopup, backdropFilter:"blur(24px)", WebkitBackdropFilter:"blur(24px)", zIndex:1500 },
