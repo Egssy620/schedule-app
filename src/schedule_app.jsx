@@ -1412,6 +1412,7 @@ export default function ScheduleApp() {
   const [updateDownloaded, setUpdateDownloaded] = useState(false);
   const [updateChecking, setUpdateChecking] = useState(false);
   const [upToDate, setUpToDate] = useState(false);
+  const [updateStatusText, setUpdateStatusText] = useState(null);
 
   const styleCtx = useMemo(() => {
     const tk = themes[theme] || themes.dark;
@@ -1504,8 +1505,8 @@ export default function ScheduleApp() {
       // app info & update check
       try { const v = await window.appInfo?.getVersion(); if (v) setAppVersion(v); } catch {}
       try { const s = await window.appInfo?.getLastSync(); if (s) setLastSync(formatSyncTime(s)); } catch {}
-      window.updateAPI?.onAvailable(info => { setUpdateInfo(info); setUpdateChecking(false); setUpToDate(false); });
-      window.updateAPI?.onNotAvailable && window.updateAPI.onNotAvailable(() => { setUpdateChecking(false); setUpToDate(true); setTimeout(() => setUpToDate(false), 3000); });
+      window.updateAPI?.onAvailable(info => { setUpdateInfo(info); setUpdateChecking(false); setUpToDate(false); setUpdateStatusText(null); });
+      window.updateAPI?.onNotAvailable && window.updateAPI.onNotAvailable(() => { setUpdateChecking(false); setUpToDate(true); showUpdateStatus("最新です"); setTimeout(() => setUpToDate(false), 3000); });
       window.updateAPI?.onProgress(p => { setUpdateDownloading(true); setUpdateProgress(p.percent); });
       window.updateAPI?.onDownloaded(() => { setUpdateDownloading(false); setUpdateDownloaded(true); });
       window.updateAPI?.check();
@@ -1565,16 +1566,44 @@ export default function ScheduleApp() {
     } catch { flash("読み込みに失敗しました"); }
   };
 
+  const showUpdateStatus = (text) => {
+    setUpdateStatusText(text);
+    setTimeout(() => setUpdateStatusText(null), 3000);
+  };
+
   const checkForUpdate = async () => {
     if (!window.updateAPI || updateInfo || updateDownloaded || updateChecking) return;
     setUpdateChecking(true);
     setUpToDate(false);
-    try { await window.updateAPI.check(); } catch {}
-    setTimeout(() => {
+    setUpdateStatusText(null);
+    let gotResult = false;
+    // listen for result within 8s
+    const timer = setTimeout(() => {
+      if (!gotResult) {
+        setUpdateChecking(false);
+        showUpdateStatus("取得失敗");
+      }
+    }, 8000);
+    try {
+      await window.updateAPI.check();
+    } catch {
+      clearTimeout(timer);
       setUpdateChecking(false);
-      setUpToDate(prev => { if (!prev) return true; return prev; });
-      setTimeout(() => setUpToDate(false), 3000);
-    }, 5000);
+      showUpdateStatus("取得失敗");
+      return;
+    }
+    // if onAvailable fires, it sets updateInfo (handled by listener)
+    // if nothing fires, the timeout above handles it
+    // for success without update, we rely on the timeout + no updateInfo
+    setTimeout(() => {
+      if (!updateInfo) {
+        setUpdateChecking(false);
+        setUpToDate(true);
+        showUpdateStatus("最新です");
+        setTimeout(() => setUpToDate(false), 3000);
+      }
+      clearTimeout(timer);
+    }, 6000);
   };
 
   const pushRecords = async () => {
@@ -2339,6 +2368,7 @@ export default function ScheduleApp() {
                 <RefreshIcon />
               )}
             </button>
+            {updateStatusText && <span style={S.updateStatusText}>{updateStatusText}</span>}
             <style>{`
               .time-scroll::-webkit-scrollbar { display: none; }
             `}</style>
@@ -2578,6 +2608,7 @@ function createStyles(t) {
   statusBar: { position:"fixed", bottom:0, left:0, right:0, display:"flex", justifyContent:"space-between", alignItems:"center", padding:"5px 20px", background:t.bgCard, borderTop:`1px solid ${t.borderLight}`, backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)", zIndex:100, fontSize:11, color:t.textVeryWeak, letterSpacing:0.3, fontFamily:"inherit" },
   statusBarLeft: { fontVariantNumeric:"tabular-nums", display:"flex", alignItems:"center", gap:6 },
   statusBarReloadBtn: { background:"none", border:"none", color:t.textVeryWeak, cursor:"pointer", padding:2, display:"flex", alignItems:"center", borderRadius:4, transition:"color .15s" },
+  updateStatusText: { fontSize:10, color:t.textDim, letterSpacing:0.3, opacity:1, transition:"opacity 0.8s ease" },
   statusBarRight: { fontVariantNumeric:"tabular-nums", display:"flex", alignItems:"center", gap:6 },
 
   /* update card */
