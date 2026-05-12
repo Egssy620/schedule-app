@@ -1437,32 +1437,32 @@ export default function ScheduleApp() {
     return () => ro.disconnect();
   }, [showWizard]);
 
-  // ── Layout debug ──
-  useEffect(() => {
-    const raf = () => {
-      const log = (label, el) => {
-        if (!el) return;
-        const r = el.getBoundingClientRect();
-        console.log(`[${label}] left=${Math.round(r.left)} right=${Math.round(r.right)} width=${Math.round(r.width)}`);
-      };
-      log("outerWrap   ", document.querySelector("[data-dbg='outerWrap']"));
-      log("header      ", document.querySelector("[data-dbg='header']"));
-      log("headerAct   ", document.querySelector("[data-dbg='headerActions']"));
-      log("topLayout   ", document.querySelector("[data-dbg='topLayout']"));
-      log("analytics   ", document.querySelector("[data-dbg='analytics']"));
-      log("contentWrap ", document.querySelector("[data-dbg='contentWrap']"));
-      log("mainGrid    ", document.querySelector("[data-dbg='mainGrid']"));
-      log("calendarCard", document.querySelector("[data-dbg='calendarCard']"));
-      log("timePanel出 ", document.querySelector("[data-dbg='timeIn']"));
-      log("timePanel退 ", document.querySelector("[data-dbg='timeOut']"));
-      log("bottomArea  ", document.querySelector("[data-dbg='bottomArea']"));
-      console.log(`mainGridWidth(state)=${mainGridWidth}`);
-      console.log("---");
-    };
-    raf();
-    const id = setInterval(raf, 2000);
-    return () => clearInterval(id);
-  }, [mainGridWidth]);
+  // ── Layout debug (disabled) ──
+  // useEffect(() => {
+  //   const raf = () => {
+  //     const log = (label, el) => {
+  //       if (!el) return;
+  //       const r = el.getBoundingClientRect();
+  //       console.log(`[${label}] left=${Math.round(r.left)} right=${Math.round(r.right)} width=${Math.round(r.width)}`);
+  //     };
+  //     log("outerWrap   ", document.querySelector("[data-dbg='outerWrap']"));
+  //     log("header      ", document.querySelector("[data-dbg='header']"));
+  //     log("headerAct   ", document.querySelector("[data-dbg='headerActions']"));
+  //     log("topLayout   ", document.querySelector("[data-dbg='topLayout']"));
+  //     log("analytics   ", document.querySelector("[data-dbg='analytics']"));
+  //     log("contentWrap ", document.querySelector("[data-dbg='contentWrap']"));
+  //     log("mainGrid    ", document.querySelector("[data-dbg='mainGrid']"));
+  //     log("calendarCard", document.querySelector("[data-dbg='calendarCard']"));
+  //     log("timePanel出 ", document.querySelector("[data-dbg='timeIn']"));
+  //     log("timePanel退 ", document.querySelector("[data-dbg='timeOut']"));
+  //     log("bottomArea  ", document.querySelector("[data-dbg='bottomArea']"));
+  //     console.log(`mainGridWidth(state)=${mainGridWidth}`);
+  //     console.log("---");
+  //   };
+  //   raf();
+  //   const id = setInterval(raf, 2000);
+  //   return () => clearInterval(id);
+  // }, [mainGridWidth]);
 
   const dateKey = `${year}-${String(month+1).padStart(2,"0")}-${String(selectedDay).padStart(2,"0")}`;
   const fiscalYear = getFY(year, month);
@@ -1573,11 +1573,13 @@ export default function ScheduleApp() {
 
   const checkForUpdate = async () => {
     if (!window.updateAPI || updateInfo || updateDownloaded || updateChecking) return;
+    console.log("[update] check start, updateAPI:", !!window.updateAPI);
     setUpdateChecking(true);
     setUpToDate(false);
     setUpdateStatusText(null);
     try {
       const result = await window.updateAPI.check();
+      console.log("[update] check result:", JSON.stringify(result));
       setUpdateChecking(false);
       if (result?.available) {
         setUpdateInfo({ version: result.version, releaseNotes: result.releaseNotes });
@@ -1590,7 +1592,8 @@ export default function ScheduleApp() {
         showUpdateStatus("最新です");
         setTimeout(() => setUpToDate(false), 3000);
       }
-    } catch {
+    } catch (e) {
+      console.log("[update] check error:", e);
       setUpdateChecking(false);
       showUpdateStatus("取得失敗");
     }
