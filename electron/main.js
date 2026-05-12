@@ -365,6 +365,7 @@ ipcMain.handle("get-last-sync", () => {
 
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
+autoUpdater.setFeedURL({ provider: "github", owner: "Egssy620", repo: "schedule-app" });
 
 autoUpdater.on("update-available", (info) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
